@@ -938,34 +938,53 @@ const closeDeleteDialog = () => {
                                     <label>Joining Date *</label>
 
                                     <LocalizationProvider dateAdapter={AdapterDateFns}>
-                                        <DatePicker
-                                            value={
-                                                formData.joining_date
-                                                    ? parseISO(formData.joining_date)
-                                                    : null
-                                            }
-                                            onChange={(newValue) => {
-                                                setFormData((previous) => ({
-                                                    ...previous,
-                                                    joining_date:
-                                                        newValue && isValid(newValue)
-                                                            ? format(newValue, "yyyy-MM-dd")
-                                                            : ""
-                                                }));
-                                            }}
-                                            format="dd/MM/yyyy"
-                                            views={["year", "month", "day"]}
-                                            openTo="day"
-                                            slotProps={{
-                                                textField: {
-                                                    fullWidth: true,
-                                                    size: "small",
-                                                    placeholder: "DD/MM/YYYY",
-                                                    required: true
-                                                }
-                                            }}
-                                        />
-                                    </LocalizationProvider>
+  <DatePicker
+    value={
+      formData.joining_date
+        ? parseISO(formData.joining_date)
+        : null
+    }
+    onChange={(newValue) =>
+      setFormData((prev) => ({
+        ...prev,
+        joining_date:
+          newValue && isValid(newValue)
+            ? format(newValue, "yyyy-MM-dd")
+            : "",
+      }))
+    }
+    format="dd/MM/yyyy"
+    views={["year", "month", "day"]}
+    openTo="day"
+    slotProps={{
+      actionBar: {
+        actions: ["today"],
+      },
+      textField: {
+        fullWidth: true,
+        size: "small",
+        placeholder: "DD/MM/YYYY",
+        required: true,
+      },
+      popper: {
+        placement: "top-start",
+        modifiers: [
+          {
+            name: "flip",
+            enabled: true,
+          },
+          {
+            name: "preventOverflow",
+            enabled: true,
+            options: {
+              boundary: "viewport",
+            },
+          },
+        ],
+      },
+    }}
+  />
+</LocalizationProvider>
                                 </div>
 
                                 <div className="employee-form-group">

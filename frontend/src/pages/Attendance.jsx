@@ -20,6 +20,10 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import "../Dashboard.css";
 import "./Attendance.css";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { parseISO, format, isValid } from "date-fns";
 
 const EMPLOYEE_API = "http://localhost:8000/api/employees/";
 const ATTENDANCE_API = "http://localhost:8000/api/attendance/";
@@ -38,7 +42,9 @@ function Attendance() {
 
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
-  const [date, setDate] = useState(getToday());
+  const [selectedDate, setSelectedDate] = useState(
+    format(new Date(), "yyyy-MM-dd")
+);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
@@ -61,10 +67,10 @@ function Attendance() {
         axios.get(ATTENDANCE_API, {
           headers,
           params: {
-            attendance_date: date,
-            page: 1,
-            limit: 100
-          }
+    attendance_date: selectedDate,
+    page: 1,
+    limit: 100
+}
         })
       ]);
 
@@ -83,7 +89,7 @@ function Attendance() {
 
   useEffect(() => {
     fetchAttendance();
-  }, [date]);
+}, [selectedDate]);
 
   const getAttendance = (employeeId) => {
     return attendance.find(
@@ -105,11 +111,11 @@ const markAttendance = async (employeeId, status) => {
         }
 
         const payload = {
-            employee_id: employeeId,
-            attendance_date: date,
-            status: status,
-            remarks: ""
-        };
+    employee_id: employeeId,
+    attendance_date: selectedDate,
+    status: status,
+    remarks: ""
+};
 
         if (existing) {
             await axios.put(
@@ -327,11 +333,34 @@ const markAttendance = async (employeeId, status) => {
             <span>Attendance Date</span>
           </div>
 
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DatePicker
+        value={selectedDate ? parseISO(selectedDate) : null}
+        onChange={(newValue) => {
+            setSelectedDate(
+                newValue && isValid(newValue)
+                    ? format(newValue, "yyyy-MM-dd")
+                    : ""
+            );
+        }}
+        format="dd/MM/yyyy"
+        views={["year", "month", "day"]}
+        openTo="day"
+        maxDate={new Date()}
+        slotProps={{
+    textField: {
+        size: "small",
+        placeholder: "DD/MM/YYYY",
+        sx: {
+            width: "220px"
+        }
+    },
+    actionBar: {
+        actions: ["today"]
+    }
+}}
+    />
+</LocalizationProvider>
         </div>
 
         {/* SUMMARY */}

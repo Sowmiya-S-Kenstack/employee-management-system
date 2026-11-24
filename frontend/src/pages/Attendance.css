@@ -390,3 +390,13 @@
     cursor: not-allowed;
     pointer-events: none;
 }
+
+.attendance-date-picker {
+    min-width: 180px;
+}
+
+@media (max-width: 600px) {
+    .attendance-date-card .MuiTextField-root {
+        width: 100% !important;
+    }
+}

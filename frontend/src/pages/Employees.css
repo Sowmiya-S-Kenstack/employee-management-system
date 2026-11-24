@@ -589,3 +589,12 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+
+.MuiDateCalendar-root {
+  width: 280px !important;
+}
+
+.MuiPickersLayout-root {
+  min-width: 280px !important;
+}

@@ -42,6 +42,7 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
     // Fetch dashboard information from FastAPI
     const fetchDashboardData = async () => {
@@ -102,14 +103,18 @@ function Dashboard() {
 
     // Logout
     const handleLogout = () => {
+  setShowLogoutDialog(true);
+};
 
-        sessionStorage.removeItem("access_token");
-        sessionStorage.removeItem("user");
+const confirmLogout = () => {
+  sessionStorage.removeItem("access_token");
+  sessionStorage.removeItem("user");
 
-        toast.success("Logged out successfully!");
+  toast.success("Logged out successfully!");
 
-        navigate("/login");
-    };
+  setShowLogoutDialog(false);
+  navigate("/login");
+};
 
     // Logged-in user information
     const user = dashboardData?.current_user;
@@ -799,7 +804,7 @@ function Dashboard() {
 
                         </div>
 
-                    </section>
+                                        </section>
 
                     {/* Footer */}
                     <footer className="dashboard-footer">
@@ -809,6 +814,41 @@ function Dashboard() {
                 </div>
 
             </main>
+
+            {/* LOGOUT CONFIRMATION DIALOG */}
+            {showLogoutDialog && (
+                <div className="logout-dialog-overlay">
+                    <div className="logout-dialog">
+
+                        <div className="logout-dialog-icon">
+                            <LogOut size={24} />
+                        </div>
+
+                        <h3>Confirm Logout</h3>
+
+                        <p>
+                            Are you sure you want to log out?
+                        </p>
+
+                        <div className="logout-dialog-actions">
+                            <button
+                                className="logout-cancel-btn"
+                                onClick={() => setShowLogoutDialog(false)}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                className="logout-confirm-btn"
+                                onClick={confirmLogout}
+                            >
+                                Yes, Logout
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
         </div>
     );

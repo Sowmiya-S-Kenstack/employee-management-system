@@ -1,9 +1,10 @@
-
 from sqlalchemy import (
     Column,
     Integer,
     String,
     DateTime,
+    Date,
+    Boolean,
     func
 )
 
@@ -56,10 +57,6 @@ class User(Base):
     )
 
 
-from sqlalchemy import Column, Integer, String, Date
-
-
-
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -92,4 +89,12 @@ class Employee(Base):
         nullable=False,
         default="Active",
         server_default="Active"
+    )
+
+    # Soft deletion flag
+    is_deleted = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
     )

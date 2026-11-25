@@ -111,7 +111,9 @@ def get_employees(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_authenticated_user)
 ):
-    query = db.query(Employee)
+    query = db.query(Employee).filter(
+        Employee.is_deleted == False
+    )
 
     # Search by employee name or email
     if search.strip():
@@ -267,7 +269,7 @@ def deactivate_employee(
     return employee
 
 
-# DELETE EMPLOYEE PERMANENTLY
+# DELETE EMPLOYEE - SOFT DELETE
 @router.delete("/{employee_id}")
 def delete_employee(
     employee_id: int,
@@ -284,8 +286,18 @@ def delete_employee(
             detail="Employee not found"
         )
 
-    db.delete(employee)
+    if employee.is_deleted:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee is already deleted"
+        )
+
+    # Keep employee data in database
+    employee.is_deleted = True
+    employee.status = "Inactive"
+
     db.commit()
+    db.refresh(employee)
 
     return {
         "success": True,

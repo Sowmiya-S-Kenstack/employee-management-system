@@ -64,12 +64,15 @@ def get_dashboard_overview(
     # 1. Total employees from employees table
     total_employees = db.query(
         func.count(Employee.employee_id)
+    ).filter(
+        Employee.is_deleted == False
     ).scalar() or 0
 
     # 2. Active employees
     active_employees = db.query(
         func.count(Employee.employee_id)
     ).filter(
+        Employee.is_deleted == False,
         func.lower(Employee.status) == "active"
     ).scalar() or 0
 
@@ -77,11 +80,14 @@ def get_dashboard_overview(
     inactive_employees = db.query(
         func.count(Employee.employee_id)
     ).filter(
+        Employee.is_deleted == False,
         func.lower(Employee.status) == "inactive"
     ).scalar() or 0
 
     # 4. Recently added employees
-    recent_employee_records = db.query(Employee).order_by(
+    recent_employee_records = db.query(Employee).filter(
+        Employee.is_deleted == False
+    ).order_by(
         Employee.employee_id.desc()
     ).limit(5).all()
 
@@ -118,6 +124,7 @@ def get_dashboard_overview(
         month_expression.label("month"),
         func.count(Employee.employee_id).label("total")
     ).filter(
+        Employee.is_deleted == False,
         Employee.joining_date >= first_month,
         Employee.joining_date < next_month
     ).group_by(

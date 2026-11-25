@@ -33,6 +33,10 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import { format, parseISO, isValid } from "date-fns";
 
+import {
+    FileSpreadsheet
+} from "lucide-react";
+
 const API_URL = "http://localhost:8000/api/employees";
 
 const initialForm = {
@@ -447,6 +451,16 @@ const closeDeleteDialog = () => {
                     <ChartColumn size={19} />
                     <span>Statistics</span>
                 </button>
+
+                <button
+    className={`nav-item ${
+        location.pathname === "/reports" ? "active" : ""
+    }`}
+    onClick={() => navigate("/reports")}
+>
+    <FileSpreadsheet size={19} />
+    <span>Reports</span>
+</button>
             </nav>
 
             <div className="sidebar-bottom">

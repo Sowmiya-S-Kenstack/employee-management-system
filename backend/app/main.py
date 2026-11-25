@@ -11,6 +11,7 @@ from .employees import router as employee_router
 
 from . import attendance_models
 from .attendance import router as attendance_router
+from .reports import router as reports_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -42,6 +43,7 @@ app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(employee_router)
 app.include_router(attendance_router)
+app.include_router(reports_router)
 
 @app.get("/")
 def home():

@@ -30,6 +30,8 @@ import {
 } from "recharts";
 
 import "./Dashboard.css";
+import { FileSpreadsheet } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 const API_URL = "http://localhost:8000/api/dashboard";
 
@@ -247,6 +249,7 @@ const confirmLogout = () => {
                         <span>Employees</span>
                     </button>
 
+
                     {/* ATTENDANCE - NEW */}
     <button
         className={`nav-item ${
@@ -269,6 +272,16 @@ const confirmLogout = () => {
                         <ChartColumn size={19} />
                         <span>Statistics</span>
                     </a>
+
+                    <NavLink
+                        to="/reports"
+                        className={({ isActive }) =>
+                            `reports-sidebar-link ${isActive ? "active" : ""}`
+                        }
+                    >
+                        <FileSpreadsheet size={18} />
+                        <span>Reports</span>
+                    </NavLink>
 
                 </nav>
 

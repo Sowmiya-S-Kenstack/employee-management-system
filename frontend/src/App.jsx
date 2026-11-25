@@ -10,6 +10,7 @@ import Dashboard from "./Dashboard";
 import ProtectedRoute from "./ProtectedRoute";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
+import Reports from "./pages/Reports";
 
 function App() {
     return (
@@ -56,6 +57,15 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <Attendance />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/reports"
+                    element={
+                        <ProtectedRoute>
+                            <Reports />
                         </ProtectedRoute>
                     }
                 />

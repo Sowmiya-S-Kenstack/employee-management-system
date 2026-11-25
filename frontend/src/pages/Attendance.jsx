@@ -24,6 +24,9 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { parseISO, format, isValid } from "date-fns";
+import {
+    FileSpreadsheet
+} from "lucide-react";
 
 const EMPLOYEE_API = "http://localhost:8000/api/employees/";
 const ATTENDANCE_API = "http://localhost:8000/api/attendance/";
@@ -275,6 +278,16 @@ const markAttendance = async (employeeId, status) => {
             <ChartColumn size={19} />
             <span>Statistics</span>
         </button>
+
+        <button
+    className={`nav-item ${
+        location.pathname === "/reports" ? "active" : ""
+    }`}
+    onClick={() => navigate("/reports")}
+>
+    <FileSpreadsheet size={19} />
+    <span>Reports</span>
+</button>
 
     </nav>
 

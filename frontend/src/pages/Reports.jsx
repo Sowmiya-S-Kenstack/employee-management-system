@@ -704,20 +704,24 @@ function Reports() {
                     )}
 
                     {/* DEPARTMENT FILTER */}
-                    {reportType === "department-wise" && (
-                        <div className="reports-filter-group">
-                            <label>Department</label>
+{reportType === "department-wise" && (
+    <div className="reports-filter-group">
+        <label>Department</label>
 
-                            <input
-                                type="text"
-                                placeholder="Enter department name (optional)"
-                                value={department}
-                                onChange={(event) =>
-                                    setDepartment(event.target.value)
-                                }
-                            />
-                        </div>
-                    )}
+        <select
+            value={department}
+            onChange={(event) =>
+                setDepartment(event.target.value)
+            }
+        >
+            <option value="">All Departments</option>
+            <option value="IT">IT</option>
+            <option value="HR">HR</option>
+            <option value="AI">AI</option>
+            <option value="Development">Development</option>
+        </select>
+    </div>
+)}
 
                     {/* ABSENCE STATUS FILTER */}
                     {reportType === "absence-leave" && (

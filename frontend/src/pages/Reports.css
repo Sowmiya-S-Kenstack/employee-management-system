@@ -329,27 +329,3 @@
     background: #fff1e6;
 }
 
-
-.reports-today-btn {
-    height: 40px;
-    padding: 0 20px;
-    border: 1px solid #e60000;
-    border-radius: 6px;
-    background: #ffffff;
-    color: #e60000;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.reports-today-btn:hover {
-    background: #e60000;
-    color: #ffffff;
-}
-
-.reports-today-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}

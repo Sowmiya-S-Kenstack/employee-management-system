@@ -103,11 +103,12 @@ function Attendance() {
   };
 
   
+
 const markAttendance = async (employeeId, status) => {
     try {
         const existing = getAttendance(employeeId);
 
-        // Do not allow status changes after check-in
+        // Prevent changing attendance after check-in
         if (existing?.check_in) {
             toast.warning(
                 "Attendance status cannot be changed after check-in."
@@ -116,37 +117,88 @@ const markAttendance = async (employeeId, status) => {
         }
 
         const payload = {
-    employee_id: employeeId,
-    attendance_date: selectedDate,
-    status: status,
-    remarks: ""
-};
+            employee_id: employeeId,
+            attendance_date: selectedDate,
+            status: status,
+            remarks: ""
+        };
 
+        let attendanceId = existing?.attendance_id;
+
+        // Create or update attendance
         if (existing) {
             await axios.put(
                 `${ATTENDANCE_API}${existing.attendance_id}`,
                 {
                     status,
                     remarks: existing.remarks || "",
-                    check_in: status === "Present" ? existing.check_in : null,
-                    check_out: status === "Present" ? existing.check_out : null
+                    check_in: null,
+                    check_out: null
                 },
                 { headers }
             );
         } else {
-            await axios.post(
+            const response = await axios.post(
                 ATTENDANCE_API,
                 payload,
                 { headers }
             );
+
+            attendanceId = response.data?.attendance_id;
         }
 
-        toast.success(`Marked as ${status}`);
-        fetchAttendance();
+        // Automatically record check-in when Present is selected
+        if (status === "Present" && selectedDate === getToday()) {
+
+            // If the POST response does not contain the ID,
+            // fetch the attendance record to find it
+            if (!attendanceId) {
+                const response = await axios.get(
+                    ATTENDANCE_API,
+                    {
+                        headers,
+                        params: {
+                            attendance_date: selectedDate,
+                            page: 1,
+                            limit: 100
+                        }
+                    }
+                );
+
+                const record = response.data.items.find(
+                    (item) => item.employee_id === employeeId
+                );
+
+                attendanceId = record?.attendance_id;
+            }
+
+            if (!attendanceId) {
+                throw new Error("Attendance record ID not found");
+            }
+
+            // Call the existing check-in endpoint
+            await axios.patch(
+                `${ATTENDANCE_API}${attendanceId}/check-in`,
+                {},
+                { headers }
+            );
+
+            toast.success(
+                "Present marked and check-in recorded successfully!"
+            );
+        } else {
+            toast.success(`Marked as ${status}`);
+        }
+
+        await fetchAttendance();
 
     } catch (error) {
+        console.error("Attendance error:", error);
+
         toast.error(
-            error.response?.data?.detail || "Unable to mark attendance"
+            error.response?.data?.detail ||
+            error.message ||
+            "Unable to mark attendance"
         );
     }
 };

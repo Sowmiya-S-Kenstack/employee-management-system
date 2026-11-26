@@ -241,7 +241,6 @@ def check_in(
     db: Session = Depends(get_db),
     current_user=Depends(get_authenticated_user)
 ):
-
     attendance = db.query(Attendance).filter(
         Attendance.attendance_id == attendance_id
     ).first()
@@ -264,15 +263,29 @@ def check_in(
             detail="Employee has already checked in"
         )
 
-    attendance.check_in = datetime.now().time().replace(
+    # Record check-in time
+    current_time = datetime.now().time().replace(
         microsecond=0
     )
 
+    attendance.check_in = current_time
+
+    # Calculate late status using 9:30 AM threshold
+    attendance.is_late = current_time > OFFICE_START_TIME
+
+    # Save late remark
+    if attendance.is_late:
+        attendance.remarks = "Late check-in"
+    else:
+        attendance.remarks = None
+
     db.commit()
+    db.refresh(attendance)
 
     return {
         "message": "Check-in recorded successfully",
-        "check_in": attendance.check_in
+        "check_in": attendance.check_in,
+        "is_late": attendance.is_late
     }
 
 

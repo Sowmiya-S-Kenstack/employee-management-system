@@ -676,3 +676,133 @@
         width: 100%;
     }
 }
+
+
+/* Clear Filters Button */
+
+.reports-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 15px;
+    border: 1px solid #dce3ed;
+    border-radius: 7px;
+    background: #ffa1a1;
+    color: #526078;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.reports-clear-btn:hover {
+    background: #ffa1a7;
+    border-color: #367df5;
+    color: #367df5;
+}
+
+/* Responsive button layout */
+
+@media (max-width: 600px) {
+    .reports-clear-btn {
+        width: 100%;
+    }
+}
+
+
+/* ======================================
+   REPORT ACTION BUTTONS ALIGNMENT
+====================================== */
+
+.reports-action-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 12px;
+
+    width: 100%;
+    min-width: 0;
+
+    grid-column: 1 / -1;
+    margin-top: 4px;
+}
+
+/* All three buttons */
+.reports-clear-btn,
+.reports-preview-btn,
+.reports-download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    gap: 8px;
+
+    height: 38px;
+    min-width: 0;
+    padding: 0 16px;
+
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* Clear button */
+.reports-clear-btn {
+    background: #fff1f1;
+    border: 1px solid #ffcaca;
+    color: #d33b3b;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.reports-clear-btn:hover {
+    background: #ffe2e2;
+}
+
+/* Preview button */
+.reports-preview-btn {
+    background: #263f70;
+    border: none;
+    color: white;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Download button */
+.reports-download-btn {
+    background: #168653;
+    border: none;
+    color: white;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Disabled buttons */
+.reports-preview-btn:disabled,
+.reports-download-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Mobile: stack buttons only on small screens */
+@media (max-width: 600px) {
+    .reports-action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .reports-clear-btn,
+    .reports-preview-btn,
+    .reports-download-btn {
+        flex: 1 1 auto;
+    }
+}

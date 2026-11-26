@@ -321,6 +321,36 @@ function Reports() {
     return {};
 };
 
+    
+const clearFilters = () => {
+    // Reset Employee Report filters
+    setEmployeeId("");
+    setEmployeeDepartment("");
+    setDesignation("");
+    setEmployeeStatus("");
+    setJoiningDateFrom("");
+    setJoiningDateTo("");
+    setEmployeeSearch("");
+
+    // Reset other report filters
+    setDepartment("");
+    setAbsenceStatus("");
+
+    // Reset Attendance date filters
+    setStartDate(getToday());
+    setEndDate(getToday());
+
+    // Reset Monthly Attendance filter
+    setSelectedMonth(getCurrentMonth());
+
+    // Clear preview table
+    setReportData([]);
+    setHasPreview(false);
+
+    toast.info("Filters cleared");
+};
+    
+
     const previewReport = async () => {
         if (!validateFilters()) return;
 
@@ -997,28 +1027,36 @@ function Reports() {
                         </div>
                     )}
 
-                    {/* ACTION BUTTONS */}
-                    <div className="reports-action-buttons">
+                    
+<div className="reports-action-buttons">
 
-                        <button
-                            className="reports-preview-btn"
-                            onClick={previewReport}
-                            disabled={loading}
-                        >
-                            <Eye size={16} />
-                            {loading ? "Loading..." : "Preview Report"}
-                        </button>
+    <button
+        type="button"
+        className="reports-clear-btn"
+        onClick={clearFilters}
+    >
+        Clear Filters
+    </button>
 
-                        <button
-                            className="reports-download-btn"
-                            onClick={downloadExcel}
-                            disabled={downloading}
-                        >
-                            <Download size={16} />
-                            {downloading ? "Downloading..." : "Download Excel"}
-                        </button>
+    <button
+        className="reports-preview-btn"
+        onClick={previewReport}
+        disabled={loading}
+    >
+        <Eye size={16} />
+        Preview Report
+    </button>
 
-                    </div>
+    <button
+        className="reports-download-btn"
+        onClick={downloadExcel}
+        disabled={downloading}
+    >
+        <Download size={16} />
+        Download Excel
+    </button>
+
+</div>
 
                 </div>
 

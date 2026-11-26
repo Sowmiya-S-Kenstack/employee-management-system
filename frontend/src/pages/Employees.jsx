@@ -85,6 +85,8 @@ function Employees() {
     const [formData, setFormData] = useState(initialForm);
     const [saving, setSaving] = useState(false);
 
+    const [joiningDateView, setJoiningDateView] = useState("day");
+
     const token = sessionStorage.getItem("access_token");
 
     const headers = {
@@ -965,6 +967,8 @@ const closeDeleteDialog = () => {
     format="dd/MM/yyyy"
     views={["year", "month", "day"]}
     openTo="day"
+    view={joiningDateView}
+    onViewChange={(newView) => setJoiningDateView(newView)}
     slotProps={{
         actionBar: {
             actions: ["today"],

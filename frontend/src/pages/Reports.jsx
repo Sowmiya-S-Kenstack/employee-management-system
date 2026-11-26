@@ -167,8 +167,22 @@ function Reports() {
     const [endDate, setEndDate] = useState(getToday());
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
+    // Existing filters
     const [department, setDepartment] = useState("");
     const [absenceStatus, setAbsenceStatus] = useState("");
+
+    // Employee report filters
+    const [employeeId, setEmployeeId] = useState("");
+    const [employeeDepartment, setEmployeeDepartment] = useState("");
+    const [designation, setDesignation] = useState("");
+    const [employeeStatus, setEmployeeStatus] = useState("");
+    const [joiningDateFrom, setJoiningDateFrom] = useState("");
+    const [joiningDateTo, setJoiningDateTo] = useState("");
+    const [employeeSearch, setEmployeeSearch] = useState("");
+
+    // Employee dropdown options
+    const [employeeOptions, setEmployeeOptions] = useState([]);
+    const [designationOptions, setDesignationOptions] = useState([]);
 
     const [reportData, setReportData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -181,6 +195,38 @@ function Reports() {
         Authorization: `Bearer ${token}`
     };
 
+    useEffect(() => {
+    const fetchEmployeeOptions = async () => {
+        try {
+            const response = await axios.get(
+                `${REPORT_API}/employees`,
+                { headers }
+            );
+
+            const employees = response.data.data || [];
+
+            setEmployeeOptions(employees);
+
+            // Get unique designations from existing employee records
+            const designations = [
+                ...new Set(
+                    employees
+                        .map((employee) => employee.designation)
+                        .filter(Boolean)
+                )
+            ];
+
+            setDesignationOptions(designations);
+
+        } catch (error) {
+            console.error("Error loading employee options:", error);
+            toast.error("Unable to load employee filter options");
+        }
+    };
+
+    fetchEmployeeOptions();
+}, []);
+
     const user = JSON.parse(
         sessionStorage.getItem("user") || "{}"
     );
@@ -188,68 +234,92 @@ function Reports() {
     const config = reportConfigurations[reportType];
 
     const validateFilters = () => {
-        if (
-            [
-                "attendance",
-                "late-attendance",
-                "absence-leave"
-            ].includes(reportType) &&
-            startDate &&
-            endDate &&
-            startDate > endDate
-        ) {
-            toast.error("Start date cannot be after end date");
-            return false;
-        }
+    if (
+        [
+            "attendance",
+            "late-attendance",
+            "absence-leave"
+        ].includes(reportType) &&
+        startDate &&
+        endDate &&
+        startDate > endDate
+    ) {
+        toast.error("Start date cannot be after end date");
+        return false;
+    }
 
-        if (
-            reportType === "monthly-attendance" &&
-            !selectedMonth
-        ) {
-            toast.warning("Please select a month");
-            return false;
-        }
+    if (
+        reportType === "monthly-attendance" &&
+        !selectedMonth
+    ) {
+        toast.warning("Please select a month");
+        return false;
+    }
 
-        return true;
-    };
+    if (
+        reportType === "employees" &&
+        joiningDateFrom &&
+        joiningDateTo &&
+        joiningDateFrom > joiningDateTo
+    ) {
+        toast.error("Joining Date From cannot be after Joining Date To");
+        return false;
+    }
+
+    return true;
+};
 
     const getRequestParams = () => {
-        if (reportType === "monthly-attendance") {
-            return {
-                month: selectedMonth
-            };
-        }
+
+    // Employee Report filters
+    if (reportType === "employees") {
+        return {
+            employee_id: employeeId || undefined,
+            department: employeeDepartment || undefined,
+            designation: designation || undefined,
+            status: employeeStatus || undefined,
+            joining_date_from: joiningDateFrom || undefined,
+            joining_date_to: joiningDateTo || undefined,
+            search: employeeSearch.trim() || undefined
+        };
+    }
+
+    if (reportType === "monthly-attendance") {
+        return {
+            month: selectedMonth
+        };
+    }
+
+    if (
+        [
+            "attendance",
+            "late-attendance",
+            "absence-leave"
+        ].includes(reportType)
+    ) {
+        const params = {
+            start_date: startDate || undefined,
+            end_date: endDate || undefined
+        };
 
         if (
-            [
-                "attendance",
-                "late-attendance",
-                "absence-leave"
-            ].includes(reportType)
+            reportType === "absence-leave" &&
+            absenceStatus
         ) {
-            const params = {
-                start_date: startDate || undefined,
-                end_date: endDate || undefined
-            };
-
-            if (
-                reportType === "absence-leave" &&
-                absenceStatus
-            ) {
-                params.status = absenceStatus;
-            }
-
-            return params;
+            params.status = absenceStatus;
         }
 
-        if (reportType === "department-wise") {
-            return {
-                department: department || undefined
-            };
-        }
+        return params;
+    }
 
-        return {};
-    };
+    if (reportType === "department-wise") {
+        return {
+            department: department || undefined
+        };
+    }
+
+    return {};
+};
 
     const previewReport = async () => {
         if (!validateFilters()) return;
@@ -333,16 +403,23 @@ function Reports() {
     };
 
     useEffect(() => {
-        setReportData([]);
-        setHasPreview(false);
-    }, [
-        reportType,
-        startDate,
-        endDate,
-        selectedMonth,
-        department,
-        absenceStatus
-    ]);
+    setReportData([]);
+    setHasPreview(false);
+}, [
+    reportType,
+    startDate,
+    endDate,
+    selectedMonth,
+    department,
+    absenceStatus,
+    employeeId,
+    employeeDepartment,
+    designation,
+    employeeStatus,
+    joiningDateFrom,
+    joiningDateTo,
+    employeeSearch
+]);
 
     const renderCell = (item, key) => {
         if (key === "employee_id" || key === "attendance_id") {
@@ -687,6 +764,185 @@ function Reports() {
 
                         </LocalizationProvider>
                     )}
+
+                    {/* EMPLOYEE REPORT FILTERS */}
+{reportType === "employees" && (
+    <>
+        <div className="reports-filter-group">
+            <label>Employee</label>
+
+            <select
+                value={employeeId}
+                onChange={(event) =>
+                    setEmployeeId(event.target.value)
+                }
+            >
+                <option value="">All Employees</option>
+
+                {employeeOptions.map((employee) => (
+                    <option
+                        key={employee.employee_id}
+                        value={employee.employee_id}
+                    >
+                        {employee.employee_name} (#{employee.employee_id})
+                    </option>
+                ))}
+            </select>
+        </div>
+
+        <div className="reports-filter-group">
+            <label>Department</label>
+
+            <select
+                value={employeeDepartment}
+                onChange={(event) =>
+                    setEmployeeDepartment(event.target.value)
+                }
+            >
+                <option value="">All Departments</option>
+
+                {[...new Set(
+                    employeeOptions
+                        .map((employee) => employee.department)
+                        .filter(Boolean)
+                )].sort().map((item) => (
+                    <option key={item} value={item}>
+                        {item}
+                    </option>
+                ))}
+            </select>
+        </div>
+
+        <div className="reports-filter-group">
+            <label>Designation</label>
+
+            <select
+                value={designation}
+                onChange={(event) =>
+                    setDesignation(event.target.value)
+                }
+            >
+                <option value="">All Designations</option>
+
+                {designationOptions.map((item) => (
+                    <option key={item} value={item}>
+                        {item}
+                    </option>
+                ))}
+            </select>
+        </div>
+
+        <div className="reports-filter-group">
+            <label>Employment Status</label>
+
+            <select
+                value={employeeStatus}
+                onChange={(event) =>
+                    setEmployeeStatus(event.target.value)
+                }
+            >
+                <option value="">All Statuses</option>
+
+                {[...new Set(
+                    employeeOptions
+                        .map((employee) => employee.status)
+                        .filter(Boolean)
+                )].sort().map((item) => (
+                    <option key={item} value={item}>
+                        {item}
+                    </option>
+                ))}
+            </select>
+        </div>
+
+        
+
+{/* EMPLOYEE JOINING DATE FILTERS */}
+<LocalizationProvider dateAdapter={AdapterDateFns}>
+    <div className="reports-date-filters">
+
+        <div className="reports-form-group">
+            <label>Joining Date From</label>
+
+            <DatePicker
+                value={
+                    joiningDateFrom
+                        ? parseISO(joiningDateFrom)
+                        : null
+                }
+                onChange={(newValue) =>
+                    setJoiningDateFrom(
+                        newValue && isValid(newValue)
+                            ? format(newValue, "yyyy-MM-dd")
+                            : ""
+                    )
+                }
+                format="dd/MM/yyyy"
+                views={["year", "month", "day"]}
+                openTo="day"
+                slotProps={{
+                    actionBar: {
+                        actions: ["today"]
+                    },
+                    textField: {
+                        size: "small",
+                        fullWidth: true,
+                        placeholder: "DD/MM/YYYY"
+                    }
+                }}
+            />
+        </div>
+
+        <div className="reports-form-group">
+            <label>Joining Date To</label>
+
+            <DatePicker
+                value={
+                    joiningDateTo
+                        ? parseISO(joiningDateTo)
+                        : null
+                }
+                onChange={(newValue) =>
+                    setJoiningDateTo(
+                        newValue && isValid(newValue)
+                            ? format(newValue, "yyyy-MM-dd")
+                            : ""
+                    )
+                }
+                format="dd/MM/yyyy"
+                views={["year", "month", "day"]}
+                openTo="day"
+                slotProps={{
+                    actionBar: {
+                        actions: ["today"]
+                    },
+                    textField: {
+                        size: "small",
+                        fullWidth: true,
+                        placeholder: "DD/MM/YYYY"
+                    }
+                }}
+            />
+        </div>
+
+    </div>
+</LocalizationProvider>
+
+
+        <div className="reports-filter-group">
+            <label>Search Employee</label>
+
+            <input
+                type="text"
+                value={employeeSearch}
+                onChange={(event) =>
+                    setEmployeeSearch(event.target.value)
+                }
+                placeholder="Search name or email"
+            />
+        </div>
+    </>
+)}
 
                     {/* MONTH FILTER */}
                     {reportType === "monthly-attendance" && (

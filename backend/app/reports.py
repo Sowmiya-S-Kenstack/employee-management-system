@@ -94,21 +94,76 @@ def create_excel_file(sheet_name, headers, rows):
 
 
 # --------------------------------------------------
-# EMPLOYEE REPORT QUERY
+# EMPLOYEE REPORT QUERY WITH FILTERS
 # --------------------------------------------------
 
-def get_employee_report_data(db: Session):
+def get_employee_report_data(
+    db: Session,
+    employee_id: Optional[int] = None,
+    department: Optional[str] = None,
+    designation: Optional[str] = None,
+    status: Optional[str] = None,
+    joining_date_from: Optional[date] = None,
+    joining_date_to: Optional[date] = None,
+    search: Optional[str] = None
+):
 
-    employees = db.query(Employee).filter(
+    query = db.query(Employee).filter(
         Employee.is_deleted == False
-    ).order_by(
+    )
+
+    # Employee ID filter
+    if employee_id is not None:
+        query = query.filter(
+            Employee.employee_id == employee_id
+        )
+
+    # Department filter
+    if department:
+        query = query.filter(
+            Employee.department == department
+        )
+
+    # Designation filter
+    if designation:
+        query = query.filter(
+            Employee.designation == designation
+        )
+
+    # Employment status filter
+    if status:
+        query = query.filter(
+            Employee.status == status
+        )
+
+    # Joining date from
+    if joining_date_from:
+        query = query.filter(
+            Employee.joining_date >= joining_date_from
+        )
+
+    # Joining date to
+    if joining_date_to:
+        query = query.filter(
+            Employee.joining_date <= joining_date_to
+        )
+
+    # Employee name or email search
+    if search:
+        search_value = f"%{search.strip()}%"
+
+        query = query.filter(
+            (Employee.employee_name.ilike(search_value)) |
+            (Employee.email.ilike(search_value))
+        )
+
+    employees = query.order_by(
         Employee.employee_id.asc()
     ).all()
 
     rows = []
 
     for employee in employees:
-
         rows.append([
             employee.employee_id,
             employee.employee_name,
@@ -124,16 +179,43 @@ def get_employee_report_data(db: Session):
 
 
 # --------------------------------------------------
-# EMPLOYEE REPORT PREVIEW
+# EMPLOYEE REPORT PREVIEW WITH FILTERS
 # --------------------------------------------------
 
 @router.get("/employees")
 def employee_report(
+    employee_id: Optional[int] = Query(None),
+    department: Optional[str] = Query(None),
+    designation: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    joining_date_from: Optional[date] = Query(None),
+    joining_date_to: Optional[date] = Query(None),
+    search: Optional[str] = Query(None),
+
     db: Session = Depends(get_db),
     current_user: User = Depends(get_authenticated_user)
 ):
 
-    rows = get_employee_report_data(db)
+    if (
+        joining_date_from
+        and joining_date_to
+        and joining_date_from > joining_date_to
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Joining date from cannot be after joining date to"
+        )
+
+    rows = get_employee_report_data(
+        db=db,
+        employee_id=employee_id,
+        department=department,
+        designation=designation,
+        status=status,
+        joining_date_from=joining_date_from,
+        joining_date_to=joining_date_to,
+        search=search
+    )
 
     return {
         "total_records": len(rows),
@@ -154,16 +236,43 @@ def employee_report(
 
 
 # --------------------------------------------------
-# EMPLOYEE EXCEL DOWNLOAD
+# EMPLOYEE EXCEL DOWNLOAD WITH FILTERS
 # --------------------------------------------------
 
 @router.get("/employees/excel")
 def download_employee_report(
+    employee_id: Optional[int] = Query(None),
+    department: Optional[str] = Query(None),
+    designation: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    joining_date_from: Optional[date] = Query(None),
+    joining_date_to: Optional[date] = Query(None),
+    search: Optional[str] = Query(None),
+
     db: Session = Depends(get_db),
     current_user: User = Depends(get_authenticated_user)
 ):
 
-    rows = get_employee_report_data(db)
+    if (
+        joining_date_from
+        and joining_date_to
+        and joining_date_from > joining_date_to
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Joining date from cannot be after joining date to"
+        )
+
+    rows = get_employee_report_data(
+        db=db,
+        employee_id=employee_id,
+        department=department,
+        designation=designation,
+        status=status,
+        joining_date_from=joining_date_from,
+        joining_date_to=joining_date_to,
+        search=search
+    )
 
     headers = [
         "Employee ID",
@@ -190,8 +299,6 @@ def download_employee_report(
             'attachment; filename="Employee_Report.xlsx"'
         }
     )
-
-
 # --------------------------------------------------
 # ATTENDANCE REPORT QUERY
 # --------------------------------------------------

@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 AttendanceStatus = Literal[
     "Present",
     "Absent",
-    "On Leave"
+    "On Leave",
+    "Holiday"
 ]
 
 
@@ -71,6 +72,8 @@ class AttendanceResponse(BaseModel):
     check_out: Optional[time]
 
     remarks: Optional[str]
+
+    is_late: bool = False
 
     model_config = ConfigDict(
         from_attributes=True

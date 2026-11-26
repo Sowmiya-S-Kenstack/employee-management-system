@@ -37,6 +37,8 @@ import {
     FileSpreadsheet
 } from "lucide-react";
 
+import { logoutWithAttendance } from "../utils/logoutWithAttendance";
+
 const API_URL = "http://localhost:8000/api/employees";
 
 const initialForm = {
@@ -65,15 +67,6 @@ function Employees() {
         sessionStorage.getItem("user") || "{}"
     );
 
-    // Logout
-    const handleLogout = () => {
-        sessionStorage.removeItem("access_token");
-        sessionStorage.removeItem("user");
-
-        toast.success("Logged out successfully!");
-
-        navigate("/login");
-    };
 
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -477,12 +470,14 @@ const closeDeleteDialog = () => {
                 </div>
 
                 <button
-                    className="sidebar-logout"
-                    onClick={handleLogout}
-                    title="Logout"
-                >
-                    <LogOut size={19} />
-                </button>
+    className="sidebar-logout"
+    onClick={async () => {
+        await logoutWithAttendance(navigate);
+    }}
+    title="Logout"
+>
+    <LogOut size={19} />
+</button>
 
             </div>
 

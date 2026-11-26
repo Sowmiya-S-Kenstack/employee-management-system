@@ -12,6 +12,7 @@ from sqlalchemy import (
 )
 
 from .database import Base
+from sqlalchemy import Boolean
 
 
 class Attendance(Base):
@@ -62,6 +63,12 @@ class Attendance(Base):
         DateTime,
         server_default=func.now(),
         nullable=False
+    )
+
+    is_late = Column(
+        Boolean,
+        nullable=False,
+        default=False
     )
 
     __table_args__ = (

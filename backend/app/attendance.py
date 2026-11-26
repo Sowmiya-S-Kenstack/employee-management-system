@@ -31,10 +31,16 @@ from .attendance_schemas import (
 from .security import get_current_user_id
 
 
+from datetime import datetime, date, time
+from sqlalchemy import text
+from .models import Employee
+
 router = APIRouter(
     prefix="/api/attendance",
     tags=["Attendance"]
 )
+
+OFFICE_START_TIME = time(9, 30)
 
 bearer_scheme = HTTPBearer()
 
@@ -126,7 +132,8 @@ def get_attendance(
             "status": attendance.status,
             "check_in": attendance.check_in,
             "check_out": attendance.check_out,
-            "remarks": attendance.remarks
+            "remarks": attendance.remarks,
+            "is_late": attendance.is_late
         })
 
     return {
@@ -334,4 +341,132 @@ def delete_attendance(
 
     return {
         "message": "Attendance deleted successfully"
+    }
+
+def is_holiday(db: Session, attendance_date: date) -> bool:
+
+    # Saturday = 5, Sunday = 6
+    if attendance_date.weekday() in (5, 6):
+        return True
+
+    result = db.execute(
+        text("""
+            SELECT holiday_id
+            FROM holidays
+            WHERE holiday_date = :attendance_date
+        """),
+        {
+            "attendance_date": attendance_date
+        }
+    ).first()
+
+    return result is not None
+
+
+@router.post("/auto-check-in")
+def auto_check_in(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_authenticated_user)
+):
+    today = date.today()
+    now = datetime.now()
+
+    # Find employee using logged-in user's email
+    employee = db.query(Employee).filter(
+        Employee.email == current_user.email,
+        Employee.is_deleted == False
+    ).first()
+
+    if not employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee record not found for this login"
+        )
+
+    # Do not create attendance on weekends/holidays
+    if is_holiday(db, today):
+        return {
+            "message": "Today is a holiday",
+            "status": "Holiday"
+        }
+
+    # Check whether attendance already exists
+    attendance = db.query(Attendance).filter(
+        Attendance.employee_id == employee.employee_id,
+        Attendance.attendance_date == today
+    ).first()
+
+    if attendance:
+        return {
+            "message": "Attendance already recorded",
+            "status": attendance.status,
+            "check_in": attendance.check_in
+        }
+
+    late = now.time() > OFFICE_START_TIME
+
+    attendance = Attendance(
+        employee_id=employee.employee_id,
+        attendance_date=today,
+        status="Present",
+        check_in=now.time(),
+        is_late=late,
+        remarks="Late check-in" if late else None
+    )
+
+    db.add(attendance)
+    db.commit()
+    db.refresh(attendance)
+
+    return {
+        "message": "Attendance recorded successfully",
+        "status": "Present",
+        "is_late": late,
+        "check_in": attendance.check_in
+    }
+
+@router.post("/check-out")
+def auto_check_out(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_authenticated_user)
+):
+    today = date.today()
+    now = datetime.now()
+
+    employee = db.query(Employee).filter(
+        Employee.email == current_user.email,
+        Employee.is_deleted == False
+    ).first()
+
+    if not employee:
+        raise HTTPException(
+            status_code=404,
+            detail="Employee record not found"
+        )
+
+    attendance = db.query(Attendance).filter(
+        Attendance.employee_id == employee.employee_id,
+        Attendance.attendance_date == today
+    ).first()
+
+    if not attendance:
+        raise HTTPException(
+            status_code=404,
+            detail="Today's check-in record not found"
+        )
+
+    if attendance.check_out:
+        return {
+            "message": "Check-out already recorded",
+            "check_out": attendance.check_out
+        }
+
+    attendance.check_out = now.time()
+
+    db.commit()
+    db.refresh(attendance)
+
+    return {
+        "message": "Check-out recorded successfully",
+        "check_out": attendance.check_out
     }

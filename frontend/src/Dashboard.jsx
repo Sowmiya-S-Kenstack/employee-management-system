@@ -32,6 +32,7 @@ import {
 import "./Dashboard.css";
 import { FileSpreadsheet } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { logoutWithAttendance } from "./utils/logoutWithAttendance";
 
 const API_URL = "http://localhost:8000/api/dashboard";
 
@@ -104,8 +105,8 @@ function Dashboard() {
     }, []);
 
     // Logout
-    const handleLogout = () => {
-  setShowLogoutDialog(true);
+    const handleLogout = async () => {
+    await logoutWithAttendance(navigate);
 };
 
 const confirmLogout = () => {

@@ -400,3 +400,13 @@
         width: 100% !important;
     }
 }
+
+.attendance-status.holiday {
+    color: #2563eb;
+    background: #eaf2ff;
+}
+
+.attendance-status.late {
+    color: #c2410c;
+    background: #fff1e6;
+}

@@ -13,6 +13,9 @@ from . import attendance_models
 from .attendance import router as attendance_router
 from .reports import router as reports_router
 
+from .attendance_scheduler import mark_daily_attendance
+from apscheduler.schedulers.background import BackgroundScheduler
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +26,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
+scheduler = BackgroundScheduler()
+
+scheduler.add_job(
+    mark_daily_attendance,
+    trigger="cron",
+    hour=18,
+    minute=5,
+    id="daily_attendance_job",
+    replace_existing=True
+)
+
+@app.on_event("startup")
+def start_attendance_scheduler():
+    if not scheduler.running:
+        scheduler.start()
+
+
+@app.on_event("shutdown")
+def stop_attendance_scheduler():
+    if scheduler.running:
+        scheduler.shutdown()
 
 # React frontend connection
 app.add_middleware(
@@ -36,7 +60,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
 
 # Register API router
 app.include_router(auth_router)

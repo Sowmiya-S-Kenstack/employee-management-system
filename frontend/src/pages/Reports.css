@@ -318,3 +318,13 @@
 .reports-date-filters .MuiSvgIcon-root {
     font-size: 20px;
 }
+
+.reports-status.holiday {
+    color: #2563eb;
+    background: #eaf2ff;
+}
+
+.reports-status.late {
+    color: #c2410c;
+    background: #fff1e6;
+}

@@ -54,47 +54,72 @@ function Login() {
         return Object.keys(newErrors).length === 0;
     };
 
+
     // Handle login
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        if (!validateForm()) return;
+    if (!validateForm()) return;
 
-        setLoading(true);
+    setLoading(true);
 
+    try {
+        const response = await axios.post(
+            `${API_URL}/login`,
+            {
+                email: formData.email.trim().toLowerCase(),
+                password: formData.password
+            }
+        );
+
+        const { access_token, user } = response.data;
+
+        // Store authentication details
+        sessionStorage.setItem("access_token", access_token);
+        sessionStorage.setItem("user", JSON.stringify(user));
+
+        // Automatically record attendance after successful login
         try {
-            const response = await axios.post(
-                `${API_URL}/login`,
+            const attendanceResponse = await axios.post(
+                "http://localhost:8000/api/attendance/auto-check-in",
+                {},
                 {
-                    email: formData.email.trim().toLowerCase(),
-                    password: formData.password
+                    headers: {
+                        Authorization: `Bearer ${access_token}`
+                    }
                 }
             );
 
-            const { access_token, user } = response.data;
+            console.log(
+                "Attendance check-in:",
+                attendanceResponse.data
+            );
 
-            // Store authentication details
-            sessionStorage.setItem("access_token", access_token);
-            sessionStorage.setItem("user", JSON.stringify(user));
-
-            toast.success("Welcome back! Login successful.");
-
-            navigate("/dashboard", { replace: true });
-
-        } catch (error) {
-            if (error.response?.status === 401) {
-                toast.error("Invalid email or password");
-            } else if (error.response?.status === 422) {
-                toast.error("Please enter valid login details");
-            } else {
-                toast.error(
-                    "Unable to connect to the server. Please try again."
-                );
-            }
-        } finally {
-            setLoading(false);
+        } catch (attendanceError) {
+            console.error(
+                "Attendance check-in error:",
+                attendanceError.response?.data || attendanceError
+            );
         }
-    };
+
+        toast.success("Welcome back! Login successful.");
+
+        navigate("/dashboard", { replace: true });
+
+    } catch (error) {
+        if (error.response?.status === 401) {
+            toast.error("Invalid email or password");
+        } else if (error.response?.status === 422) {
+            toast.error("Please enter valid login details");
+        } else {
+            toast.error(
+                "Unable to connect to the server. Please try again."
+            );
+        }
+    } finally {
+        setLoading(false);
+    }
+};
 
     return (
         <div className="page-container login-page">

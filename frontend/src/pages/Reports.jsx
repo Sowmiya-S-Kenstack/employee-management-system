@@ -23,6 +23,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { parseISO, format, isValid } from "date-fns";
+import { logoutWithAttendance } from "../utils/logoutWithAttendance";
 
 const REPORT_API = "http://localhost:8000/api/reports";
 
@@ -266,11 +267,6 @@ function Reports() {
         return "Monthly Attendance Summary";
     };
 
-    const handleLogout = () => {
-        sessionStorage.clear();
-        navigate("/login", { replace: true });
-    };
-
     return (
         <div className="dashboard-layout">
 
@@ -359,13 +355,17 @@ function Reports() {
                         <span>Registered User</span>
                     </div>
 
-                    <button
-                        className="sidebar-logout"
-                        onClick={handleLogout}
-                        title="Logout"
-                    >
-                        <LogOut size={19} />
-                    </button>
+                    
+<button
+    className="sidebar-logout"
+    onClick={async () => {
+        await logoutWithAttendance(navigate);
+    }}
+    title="Logout"
+>
+    <LogOut size={19} />
+</button>
+
 
                 </div>
 
@@ -675,13 +675,21 @@ function Reports() {
                                                     </td>
 
                                                     <td>
-                                                        <span
-                                                            className={`reports-status ${
-                                                                item.status?.toLowerCase()
-                                                            }`}
-                                                        >
-                                                            {item.status}
-                                                        </span>
+                                                        <td>
+    <span
+        className={`reports-status ${
+            item.status?.toLowerCase().replace(" ", "-")
+        }`}
+    >
+        {item.status}
+    </span>
+
+    {item.is_late && (
+        <span className="reports-status late">
+            Late
+        </span>
+    )}
+</td>
                                                     </td>
                                                 </>
                                             )}

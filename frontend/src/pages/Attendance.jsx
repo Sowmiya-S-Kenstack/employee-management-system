@@ -28,6 +28,8 @@ import {
     FileSpreadsheet
 } from "lucide-react";
 
+import { logoutWithAttendance } from "../utils/logoutWithAttendance";
+
 const EMPLOYEE_API = "http://localhost:8000/api/employees/";
 const ATTENDANCE_API = "http://localhost:8000/api/attendance/";
 
@@ -306,16 +308,14 @@ const markAttendance = async (employeeId, status) => {
         </div>
 
         <button
-            className="sidebar-logout"
-            onClick={() => {
-                sessionStorage.clear();
-                navigate("/login", { replace: true });
-            }}
-            title="Logout"
-        >
-            <LogOut size={19} />
-        </button>
-
+    className="sidebar-logout"
+    onClick={async () => {
+        await logoutWithAttendance(navigate);
+    }}
+    title="Logout"
+>
+    <LogOut size={19} />
+</button>
     </div>
 
 </aside>
@@ -495,17 +495,31 @@ const markAttendance = async (employeeId, status) => {
 
                         <td>{employee.department}</td>
 
-                        <td>
-                          <span
-                            className={`attendance-status ${
-                              record
-                                ? record.status.toLowerCase().replace(" ", "-")
-                                : "not-marked"
-                            }`}
-                          >
-                            {record?.status || "Not Marked"}
-                          </span>
-                        </td>
+                        
+<td>
+    {record ? (
+        <>
+            <span
+                className={`attendance-status ${
+                    record.status?.toLowerCase().replace(" ", "-")
+                }`}
+            >
+                {record.status}
+            </span>
+
+            {record.is_late && (
+                <span className="attendance-status late">
+                    Late
+                </span>
+            )}
+        </>
+    ) : (
+        <span className="attendance-status not-marked">
+            Not Marked
+        </span>
+    )}
+</td>
+
 
                         <td>{formatTime(record?.check_in)}</td>
                         <td>{formatTime(record?.check_out)}</td>

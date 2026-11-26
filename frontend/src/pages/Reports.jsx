@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+
 import {
     Users,
     LayoutDashboard,
@@ -14,6 +15,7 @@ import {
     Eye,
     Download
 } from "lucide-react";
+
 import { useNavigate, useLocation } from "react-router-dom";
 
 import "../Dashboard.css";
@@ -22,6 +24,7 @@ import "./Reports.css";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+
 import { parseISO, format, isValid } from "date-fns";
 import { logoutWithAttendance } from "../utils/logoutWithAttendance";
 
@@ -46,18 +49,113 @@ function formatDate(value) {
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return date.toLocaleDateString("en-GB");
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toLocaleDateString("en-GB");
 }
 
 function formatTime(value) {
-    if (!value) return "--";
-
-    return String(value).slice(0, 5);
+    return value ? String(value).slice(0, 5) : "--";
 }
+
+const reportConfigurations = {
+    employees: {
+        title: "Employee Records",
+        preview: "/employees",
+        excel: "/employees/excel",
+        columns: [
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["email", "Email"],
+            ["mobile", "Mobile"],
+            ["department", "Department"],
+            ["designation", "Designation"],
+            ["joining_date", "Joining Date"],
+            ["status", "Status"]
+        ]
+    },
+
+    attendance: {
+        title: "Attendance Records",
+        preview: "/attendance",
+        excel: "/attendance/excel",
+        columns: [
+            ["attendance_id", "Attendance ID"],
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["department", "Department"],
+            ["attendance_date", "Attendance Date"],
+            ["status", "Status"],
+            ["check_in", "Check In"],
+            ["check_out", "Check Out"],
+            ["remarks", "Remarks"]
+        ]
+    },
+
+    "monthly-attendance": {
+        title: "Monthly Attendance Summary",
+        preview: "/monthly-attendance",
+        excel: "/monthly-attendance/excel",
+        columns: [
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["department", "Department"],
+            ["designation", "Designation"],
+            ["present", "Present"],
+            ["absent", "Absent"],
+            ["leave", "On Leave"],
+            ["marked_days", "Marked Days"],
+            ["attendance_percentage", "Attendance %"]
+        ]
+    },
+
+    "department-wise": {
+        title: "Department-wise Employee Report",
+        preview: "/department-wise",
+        excel: "/department-wise/excel",
+        columns: [
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["email", "Email"],
+            ["mobile", "Mobile"],
+            ["department", "Department"],
+            ["designation", "Designation"],
+            ["joining_date", "Joining Date"],
+            ["status", "Status"]
+        ]
+    },
+
+    "late-attendance": {
+        title: "Late Attendance Report",
+        preview: "/late-attendance",
+        excel: "/late-attendance/excel",
+        columns: [
+            ["attendance_id", "Attendance ID"],
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["department", "Department"],
+            ["attendance_date", "Attendance Date"],
+            ["check_in", "Check In"],
+            ["is_late", "Late"],
+            ["remarks", "Remarks"]
+        ]
+    },
+
+    "absence-leave": {
+        title: "Absence and Leave Report",
+        preview: "/absence-leave",
+        excel: "/absence-leave/excel",
+        columns: [
+            ["attendance_id", "Attendance ID"],
+            ["employee_id", "Employee ID"],
+            ["employee_name", "Employee Name"],
+            ["department", "Department"],
+            ["attendance_date", "Attendance Date"],
+            ["status", "Attendance Status"],
+            ["remarks", "Remarks"]
+        ]
+    }
+};
 
 function Reports() {
     const navigate = useNavigate();
@@ -68,6 +166,9 @@ function Reports() {
     const [startDate, setStartDate] = useState(getToday());
     const [endDate, setEndDate] = useState(getToday());
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+
+    const [department, setDepartment] = useState("");
+    const [absenceStatus, setAbsenceStatus] = useState("");
 
     const [reportData, setReportData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -84,56 +185,21 @@ function Reports() {
         sessionStorage.getItem("user") || "{}"
     );
 
-    const getPreviewUrl = () => {
-        if (reportType === "employees") {
-            return `${REPORT_API}/employees`;
-        }
+    const config = reportConfigurations[reportType];
 
-        if (reportType === "attendance") {
-            return `${REPORT_API}/attendance`;
-        }
-
-        return `${REPORT_API}/monthly-attendance`;
-    };
-
-    const getExcelUrl = () => {
-        if (reportType === "employees") {
-            return `${REPORT_API}/employees/excel`;
-        }
-
-        if (reportType === "attendance") {
-            return `${REPORT_API}/attendance/excel`;
-        }
-
-        return `${REPORT_API}/monthly-attendance/excel`;
-    };
-
-    const getRequestParams = () => {
-        if (reportType === "attendance") {
-            return {
-                start_date: startDate || undefined,
-                end_date: endDate || undefined
-            };
-        }
-
-        if (reportType === "monthly-attendance") {
-            return {
-                month: selectedMonth
-            };
-        }
-
-        return {};
-    };
-
-    const previewReport = async () => {
+    const validateFilters = () => {
         if (
-            reportType === "attendance" &&
+            [
+                "attendance",
+                "late-attendance",
+                "absence-leave"
+            ].includes(reportType) &&
             startDate &&
             endDate &&
             startDate > endDate
         ) {
             toast.error("Start date cannot be after end date");
-            return;
+            return false;
         }
 
         if (
@@ -141,14 +207,58 @@ function Reports() {
             !selectedMonth
         ) {
             toast.warning("Please select a month");
-            return;
+            return false;
         }
+
+        return true;
+    };
+
+    const getRequestParams = () => {
+        if (reportType === "monthly-attendance") {
+            return {
+                month: selectedMonth
+            };
+        }
+
+        if (
+            [
+                "attendance",
+                "late-attendance",
+                "absence-leave"
+            ].includes(reportType)
+        ) {
+            const params = {
+                start_date: startDate || undefined,
+                end_date: endDate || undefined
+            };
+
+            if (
+                reportType === "absence-leave" &&
+                absenceStatus
+            ) {
+                params.status = absenceStatus;
+            }
+
+            return params;
+        }
+
+        if (reportType === "department-wise") {
+            return {
+                department: department || undefined
+            };
+        }
+
+        return {};
+    };
+
+    const previewReport = async () => {
+        if (!validateFilters()) return;
 
         try {
             setLoading(true);
 
             const response = await axios.get(
-                getPreviewUrl(),
+                `${REPORT_API}${config.preview}`,
                 {
                     headers,
                     params: getRequestParams()
@@ -175,29 +285,13 @@ function Reports() {
     };
 
     const downloadExcel = async () => {
-        if (
-            reportType === "attendance" &&
-            startDate &&
-            endDate &&
-            startDate > endDate
-        ) {
-            toast.error("Start date cannot be after end date");
-            return;
-        }
-
-        if (
-            reportType === "monthly-attendance" &&
-            !selectedMonth
-        ) {
-            toast.warning("Please select a month");
-            return;
-        }
+        if (!validateFilters()) return;
 
         try {
             setDownloading(true);
 
             const response = await axios.get(
-                getExcelUrl(),
+                `${REPORT_API}${config.excel}`,
                 {
                     headers,
                     params: getRequestParams(),
@@ -215,19 +309,10 @@ function Reports() {
             );
 
             const downloadUrl = window.URL.createObjectURL(blob);
-
             const link = document.createElement("a");
 
             link.href = downloadUrl;
-
-            if (reportType === "employees") {
-                link.download = "Employee_Report.xlsx";
-            } else if (reportType === "attendance") {
-                link.download = "Attendance_Report.xlsx";
-            } else {
-                link.download =
-                    `Monthly_Attendance_${selectedMonth}.xlsx`;
-            }
+            link.download = `${reportType.replaceAll("-", "_")}_Report.xlsx`;
 
             document.body.appendChild(link);
             link.click();
@@ -235,15 +320,12 @@ function Reports() {
 
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success("Excel report downloaded");
+            toast.success("Excel report downloaded successfully");
 
         } catch (error) {
             console.error(error);
 
-            toast.error(
-                error.response?.data?.detail ||
-                "Unable to download Excel report"
-            );
+            toast.error("Unable to download Excel report");
 
         } finally {
             setDownloading(false);
@@ -253,18 +335,40 @@ function Reports() {
     useEffect(() => {
         setReportData([]);
         setHasPreview(false);
-    }, [reportType]);
+    }, [
+        reportType,
+        startDate,
+        endDate,
+        selectedMonth,
+        department,
+        absenceStatus
+    ]);
 
-    const getReportTitle = () => {
-        if (reportType === "employees") {
-            return "Employee Records";
+    const renderCell = (item, key) => {
+        if (key === "employee_id" || key === "attendance_id") {
+            return `#${item[key]}`;
         }
 
-        if (reportType === "attendance") {
-            return "Attendance Records";
+        if (
+            key === "joining_date" ||
+            key === "attendance_date"
+        ) {
+            return formatDate(item[key]);
         }
 
-        return "Monthly Attendance Summary";
+        if (key === "check_in" || key === "check_out") {
+            return formatTime(item[key]);
+        }
+
+        if (key === "is_late") {
+            return item.is_late ? "Yes" : "No";
+        }
+
+        if (key === "attendance_percentage") {
+            return `${item[key]}%`;
+        }
+
+        return item[key] ?? "--";
     };
 
     return (
@@ -349,23 +453,19 @@ function Reports() {
                     </div>
 
                     <div className="sidebar-user-info">
-                        <strong>
-                            {user.full_name || "User"}
-                        </strong>
+                        <strong>{user.full_name || "User"}</strong>
                         <span>Registered User</span>
                     </div>
 
-                    
-<button
-    className="sidebar-logout"
-    onClick={async () => {
-        await logoutWithAttendance(navigate);
-    }}
-    title="Logout"
->
-    <LogOut size={19} />
-</button>
-
+                    <button
+                        className="sidebar-logout"
+                        onClick={async () => {
+                            await logoutWithAttendance(navigate);
+                        }}
+                        title="Logout"
+                    >
+                        <LogOut size={19} />
+                    </button>
 
                 </div>
 
@@ -378,7 +478,6 @@ function Reports() {
 
                     <div>
                         <h1>Reports</h1>
-
                         <p>
                             Generate and download employee
                             and attendance reports.
@@ -388,6 +487,7 @@ function Reports() {
                     <button
                         className="reports-refresh"
                         onClick={previewReport}
+                        disabled={loading}
                     >
                         <RefreshCw size={16} />
                         Refresh
@@ -395,7 +495,7 @@ function Reports() {
 
                 </div>
 
-                {/* REPORT FILTERS */}
+                {/* FILTER CARD */}
                 <div className="reports-filter-card">
 
                     <div className="reports-filter-group">
@@ -418,110 +518,175 @@ function Reports() {
                             <option value="monthly-attendance">
                                 Monthly Attendance Report
                             </option>
+
+                            <option value="department-wise">
+                                Department-wise Employee Report
+                            </option>
+
+                            <option value="late-attendance">
+                                Late Attendance Report
+                            </option>
+
+                            <option value="absence-leave">
+                                Absence & Leave Report
+                            </option>
                         </select>
                     </div>
 
-                    {/* ATTENDANCE DATE FILTERS */}
-{reportType === "attendance" && (
+                    {/* DATE FILTERS */}
+                    {[
+                        "attendance",
+                        "late-attendance",
+                        "absence-leave"
+                    ].includes(reportType) && (
 
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <LocalizationProvider dateAdapter={AdapterDateFns}>
 
-        <div className="reports-date-filters">
+                            <div className="reports-date-filters">
 
-            {/* START DATE */}
-            <div className="reports-form-group">
+                                <div className="reports-form-group">
+                                    <label>Start Date</label>
 
-                <label>Start Date</label>
+                                    <DatePicker
+    value={
+        startDate
+            ? parseISO(startDate)
+            : null
+    }
+    onChange={(newValue) =>
+        setStartDate(
+            newValue && isValid(newValue)
+                ? format(newValue, "yyyy-MM-dd")
+                : ""
+        )
+    }
+    format="dd/MM/yyyy"
+    views={["year", "month", "day"]}
+    openTo="day"
+    maxDate={endDate ? parseISO(endDate) : new Date()}
+    slotProps={{
+        actionBar: {
+            actions: ["today"],
+        },
+        textField: {
+            size: "small",
+            placeholder: "DD/MM/YYYY",
+            sx: { width: "180px" },
+        },
+        popper: {
+    placement: "top-start",
+    sx: {
+        "& .MuiPaper-root": {
+            width: "320px",
+            minWidth: "320px",
+            maxWidth: "none",
+        },
+        "& .MuiPickersLayout-root": {
+            minWidth: "320px",
+            width: "320px",
+        },
+        "& .MuiDateCalendar-root": {
+            width: "320px",
+        },
+        "& .MuiMonthCalendar-root": {
+            width: "100%",
+        },
+        "& .MuiYearCalendar-root": {
+            width: "100%",
+        },
+    },
+    modifiers: [
+        {
+            name: "flip",
+            enabled: true,
+        },
+        {
+            name: "preventOverflow",
+            enabled: true,
+            options: {
+                boundary: "viewport",
+            },
+        },
+    ],
+},
+    }}
+/>
+                                </div>
 
-                <DatePicker
-                    value={
-                        startDate
-                            ? parseISO(startDate)
-                            : null
-                    }
-                    onChange={(newValue) => {
+                                <div className="reports-form-group">
+                                    <label>End Date</label>
 
-                        setStartDate(
-                            newValue && isValid(newValue)
-                                ? format(newValue, "yyyy-MM-dd")
-                                : ""
-                        );
+                                    <DatePicker
+    value={
+        endDate
+            ? parseISO(endDate)
+            : null
+    }
+    onChange={(newValue) =>
+        setEndDate(
+            newValue && isValid(newValue)
+                ? format(newValue, "yyyy-MM-dd")
+                : ""
+        )
+    }
+    format="dd/MM/yyyy"
+    views={["year", "month", "day"]}
+    openTo="day"
+    minDate={startDate ? parseISO(startDate) : undefined}
+    maxDate={new Date()}
+    slotProps={{
+        actionBar: {
+            actions: ["today"],
+        },
+        textField: {
+            size: "small",
+            placeholder: "DD/MM/YYYY",
+            sx: { width: "180px" },
+        },
+        popper: {
+    placement: "top-start",
+    sx: {
+        "& .MuiPaper-root": {
+            width: "320px",
+            minWidth: "320px",
+            maxWidth: "none",
+        },
+        "& .MuiPickersLayout-root": {
+            minWidth: "320px",
+            width: "320px",
+        },
+        "& .MuiDateCalendar-root": {
+            width: "320px",
+        },
+        "& .MuiMonthCalendar-root": {
+            width: "100%",
+        },
+        "& .MuiYearCalendar-root": {
+            width: "100%",
+        },
+    },
+    modifiers: [
+        {
+            name: "flip",
+            enabled: true,
+        },
+        {
+            name: "preventOverflow",
+            enabled: true,
+            options: {
+                boundary: "viewport",
+            },
+        },
+    ],
+},
+    }}
+/>
+                                </div>
 
-                    }}
-                    format="dd/MM/yyyy"
-                    views={["year", "month", "day"]}
-                    openTo="day"
-                    maxDate={
-                        endDate
-                            ? parseISO(endDate)
-                            : new Date()
-                    }
-                    slotProps={{
-                        textField: {
-                            size: "small",
-                            placeholder: "DD/MM/YYYY",
-                            sx: {
-                                width: "180px"
-                            }
-                        },
-                        actionBar: {
-                            actions: ["today"]
-                        }
-                    }}
-                />
+                            </div>
 
-            </div>
-
-
-            {/* END DATE */}
-            <div className="reports-form-group">
-
-                <label>End Date</label>
-
-                <DatePicker
-                    value={
-                        endDate
-                            ? parseISO(endDate)
-                            : null
-                    }
-                    onChange={(newValue) => {
-
-                        setEndDate(
-                            newValue && isValid(newValue)
-                                ? format(newValue, "yyyy-MM-dd")
-                                : ""
-                        );
-
-                    }}
-                    format="dd/MM/yyyy"
-                    views={["year", "month", "day"]}
-                    openTo="day"
-                    minDate={
-                        startDate
-                            ? parseISO(startDate)
-                            : undefined
-                    }
-                    maxDate={new Date()}
-                    slotProps={{
-                        textField: {
-                            size: "small",
-                            placeholder: "DD/MM/YYYY",
-                            sx: {
-                                width: "180px"
-                            }
-                        },
-                        actionBar: {
-                            actions: ["today"]
-                        }
-                    }}
-                />
-
-            </div>
-
-        </div>
-
-    </LocalizationProvider>
-)}
+                        </LocalizationProvider>
+                    )}
 
                     {/* MONTH FILTER */}
                     {reportType === "monthly-attendance" && (
@@ -538,6 +703,41 @@ function Reports() {
                         </div>
                     )}
 
+                    {/* DEPARTMENT FILTER */}
+                    {reportType === "department-wise" && (
+                        <div className="reports-filter-group">
+                            <label>Department</label>
+
+                            <input
+                                type="text"
+                                placeholder="Enter department name (optional)"
+                                value={department}
+                                onChange={(event) =>
+                                    setDepartment(event.target.value)
+                                }
+                            />
+                        </div>
+                    )}
+
+                    {/* ABSENCE STATUS FILTER */}
+                    {reportType === "absence-leave" && (
+                        <div className="reports-filter-group">
+                            <label>Attendance Status</label>
+
+                            <select
+                                value={absenceStatus}
+                                onChange={(event) =>
+                                    setAbsenceStatus(event.target.value)
+                                }
+                            >
+                                <option value="">All</option>
+                                <option value="Absent">Absent</option>
+                                <option value="On Leave">On Leave</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* ACTION BUTTONS */}
                     <div className="reports-action-buttons">
 
                         <button
@@ -546,10 +746,7 @@ function Reports() {
                             disabled={loading}
                         >
                             <Eye size={16} />
-
-                            {loading
-                                ? "Loading..."
-                                : "Preview Report"}
+                            {loading ? "Loading..." : "Preview Report"}
                         </button>
 
                         <button
@@ -558,10 +755,7 @@ function Reports() {
                             disabled={downloading}
                         >
                             <Download size={16} />
-
-                            {downloading
-                                ? "Downloading..."
-                                : "Download Excel"}
+                            {downloading ? "Downloading..." : "Download Excel"}
                         </button>
 
                     </div>
@@ -572,73 +766,38 @@ function Reports() {
                 <div className="reports-table-card">
 
                     <div className="reports-table-heading">
-
-                        <h2>{getReportTitle()}</h2>
+                        <h2>{config.title}</h2>
 
                         <span>
                             {hasPreview
                                 ? `${reportData.length} records found`
                                 : "Preview your report"}
                         </span>
-
                     </div>
 
                     {!hasPreview ? (
+
                         <div className="reports-empty">
-                            Select a report and click
-                            Preview Report.
+                            Select a report and click Preview Report.
                         </div>
+
                     ) : loading ? (
+
                         <div className="reports-empty">
                             Loading report...
                         </div>
+
                     ) : (
+
                         <div className="reports-table-wrapper">
 
                             <table className="reports-table">
 
                                 <thead>
                                     <tr>
-                                        {reportType === "employees" && (
-                                            <>
-                                                <th>Employee ID</th>
-                                                <th>Employee Name</th>
-                                                <th>Email</th>
-                                                <th>Mobile</th>
-                                                <th>Department</th>
-                                                <th>Designation</th>
-                                                <th>Joining Date</th>
-                                                <th>Status</th>
-                                            </>
-                                        )}
-
-                                        {reportType === "attendance" && (
-                                            <>
-                                                <th>Attendance ID</th>
-                                                <th>Employee ID</th>
-                                                <th>Employee Name</th>
-                                                <th>Department</th>
-                                                <th>Attendance Date</th>
-                                                <th>Status</th>
-                                                <th>Check In</th>
-                                                <th>Check Out</th>
-                                                <th>Remarks</th>
-                                            </>
-                                        )}
-
-                                        {reportType === "monthly-attendance" && (
-                                            <>
-                                                <th>Employee ID</th>
-                                                <th>Employee Name</th>
-                                                <th>Department</th>
-                                                <th>Designation</th>
-                                                <th>Present</th>
-                                                <th>Absent</th>
-                                                <th>On Leave</th>
-                                                <th>Marked Days</th>
-                                                <th>Attendance %</th>
-                                            </>
-                                        )}
+                                        {config.columns.map(([key, label]) => (
+                                            <th key={key}>{label}</th>
+                                        ))}
                                     </tr>
                                 </thead>
 
@@ -647,162 +806,47 @@ function Reports() {
                                     {reportData.map((item, index) => (
                                         <tr
                                             key={
-                                                item.employee_id ||
                                                 item.attendance_id ||
+                                                item.employee_id ||
                                                 index
                                             }
                                         >
-
-                                            {reportType === "employees" && (
-                                                <>
-                                                    <td>
-                                                        #{item.employee_id}
-                                                    </td>
-
-                                                    <td>
-                                                        {item.employee_name}
-                                                    </td>
-
-                                                    <td>{item.email}</td>
-                                                    <td>{item.mobile || "--"}</td>
-                                                    <td>{item.department}</td>
-                                                    <td>{item.designation}</td>
-
-                                                    <td>
-                                                        {formatDate(
-                                                            item.joining_date
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        <td>
-    <span
-        className={`reports-status ${
-            item.status?.toLowerCase().replace(" ", "-")
-        }`}
-    >
-        {item.status}
-    </span>
-
-    {item.is_late && (
-        <span className="reports-status late">
-            Late
-        </span>
-    )}
-</td>
-                                                    </td>
-                                                </>
-                                            )}
-
-                                            {reportType === "attendance" && (
-                                                <>
-                                                    <td>
-                                                        #{item.attendance_id}
-                                                    </td>
-
-                                                    <td>
-                                                        #{item.employee_id}
-                                                    </td>
-
-                                                    <td>
-                                                        {item.employee_name}
-                                                    </td>
-
-                                                    <td>{item.department}</td>
-
-                                                    <td>
-                                                        {formatDate(
-                                                            item.attendance_date
-                                                        )}
-                                                    </td>
-
-                                                    <td>
+                                            {config.columns.map(([key]) => (
+                                                <td key={key}>
+                                                    {[
+                                                        "status",
+                                                    ].includes(key) ? (
                                                         <span
                                                             className={`reports-status ${
-                                                                item.status
-                                                                    ?.toLowerCase()
-                                                                    .replace(
-                                                                        " ",
-                                                                        "-"
-                                                                    )
+                                                                String(item[key] || "")
+                                                                    .toLowerCase()
+                                                                    .replace(" ", "-")
                                                             }`}
                                                         >
-                                                            {item.status}
+                                                            {renderCell(item, key)}
                                                         </span>
-                                                    </td>
-
-                                                    <td>
-                                                        {formatTime(
-                                                            item.check_in
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {formatTime(
-                                                            item.check_out
-                                                        )}
-                                                    </td>
-
-                                                    <td>
-                                                        {item.remarks || "--"}
-                                                    </td>
-                                                </>
-                                            )}
-
-                                            {reportType === "monthly-attendance" && (
-                                                <>
-                                                    <td>
-                                                        #{item.employee_id}
-                                                    </td>
-
-                                                    <td>
-                                                        {item.employee_name}
-                                                    </td>
-
-                                                    <td>{item.department}</td>
-                                                    <td>{item.designation}</td>
-
-                                                    <td>
-                                                        <span className="reports-status present">
-                                                            {item.present}
+                                                    ) : key === "is_late" ? (
+                                                        <span
+                                                            className={`reports-status ${
+                                                                item.is_late
+                                                                    ? "late"
+                                                                    : "present"
+                                                            }`}
+                                                        >
+                                                            {item.is_late ? "Yes" : "No"}
                                                         </span>
-                                                    </td>
-
-                                                    <td>
-                                                        <span className="reports-status absent">
-                                                            {item.absent}
-                                                        </span>
-                                                    </td>
-
-                                                    <td>
-                                                        <span className="reports-status on-leave">
-                                                            {item.leave}
-                                                        </span>
-                                                    </td>
-
-                                                    <td>{item.marked_days}</td>
-
-                                                    <td>
-                                                        <strong>
-                                                            {item.attendance_percentage}%
-                                                        </strong>
-                                                    </td>
-                                                </>
-                                            )}
-
+                                                    ) : (
+                                                        renderCell(item, key)
+                                                    )}
+                                                </td>
+                                            ))}
                                         </tr>
                                     ))}
 
                                     {reportData.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={
-                                                    reportType === "employees"
-                                                        ? 8
-                                                        : reportType === "attendance"
-                                                        ? 9
-                                                        : 9
-                                                }
+                                                colSpan={config.columns.length}
                                                 className="reports-empty"
                                             >
                                                 No records found.
@@ -815,6 +859,7 @@ function Reports() {
                             </table>
 
                         </div>
+
                     )}
 
                 </div>

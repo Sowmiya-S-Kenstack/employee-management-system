@@ -949,50 +949,70 @@ const closeDeleteDialog = () => {
                                     <LocalizationProvider dateAdapter={AdapterDateFns}>
   <DatePicker
     value={
-      formData.joining_date
-        ? parseISO(formData.joining_date)
-        : null
+        formData.joining_date
+            ? parseISO(formData.joining_date)
+            : null
     }
     onChange={(newValue) =>
-      setFormData((prev) => ({
-        ...prev,
-        joining_date:
-          newValue && isValid(newValue)
-            ? format(newValue, "yyyy-MM-dd")
-            : "",
-      }))
+        setFormData((prev) => ({
+            ...prev,
+            joining_date:
+                newValue && isValid(newValue)
+                    ? format(newValue, "yyyy-MM-dd")
+                    : "",
+        }))
     }
     format="dd/MM/yyyy"
     views={["year", "month", "day"]}
     openTo="day"
     slotProps={{
-      actionBar: {
-        actions: ["today"],
-      },
-      textField: {
-        fullWidth: true,
-        size: "small",
-        placeholder: "DD/MM/YYYY",
-        required: true,
-      },
-      popper: {
-        placement: "top-start",
-        modifiers: [
-          {
-            name: "flip",
-            enabled: true,
-          },
-          {
-            name: "preventOverflow",
-            enabled: true,
-            options: {
-              boundary: "viewport",
+        actionBar: {
+            actions: ["today"],
+        },
+        textField: {
+            fullWidth: true,
+            size: "small",
+            placeholder: "DD/MM/YYYY",
+            required: true,
+        },
+        popper: {
+            placement: "top-start",
+            sx: {
+                "& .MuiPaper-root": {
+                    width: "320px",
+                    minWidth: "320px",
+                    maxWidth: "none",
+                },
+                "& .MuiPickersLayout-root": {
+                    width: "320px",
+                    minWidth: "320px",
+                },
+                "& .MuiDateCalendar-root": {
+                    width: "320px",
+                },
+                "& .MuiMonthCalendar-root": {
+                    width: "100%",
+                },
+                "& .MuiYearCalendar-root": {
+                    width: "100%",
+                },
             },
-          },
-        ],
-      },
+            modifiers: [
+                {
+                    name: "flip",
+                    enabled: true,
+                },
+                {
+                    name: "preventOverflow",
+                    enabled: true,
+                    options: {
+                        boundary: "viewport",
+                    },
+                },
+            ],
+        },
     }}
-  />
+/>
 </LocalizationProvider>
                                 </div>
 

@@ -534,3 +534,376 @@ def download_monthly_attendance_report(
                 f'attachment; filename="Monthly_Attendance_{month}.xlsx"'
         }
     )
+
+
+# ==================================================
+# 4. DEPARTMENT-WISE EMPLOYEE REPORT
+# ==================================================
+
+def get_department_employee_data(
+    db: Session,
+    department: Optional[str] = None
+):
+    query = db.query(Employee).filter(
+        Employee.is_deleted == False
+    )
+
+    if department:
+        query = query.filter(
+            Employee.department == department
+        )
+
+    employees = query.order_by(
+        Employee.department.asc(),
+        Employee.employee_name.asc()
+    ).all()
+
+    return [
+        {
+            "employee_id": employee.employee_id,
+            "employee_name": employee.employee_name,
+            "email": employee.email,
+            "mobile": employee.mobile,
+            "department": employee.department,
+            "designation": employee.designation,
+            "joining_date": employee.joining_date,
+            "status": employee.status
+        }
+        for employee in employees
+    ]
+
+
+@router.get("/department-wise")
+def department_wise_report(
+    department: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    data = get_department_employee_data(db, department)
+
+    return {
+        "total_records": len(data),
+        "data": data
+    }
+
+
+@router.get("/department-wise/excel")
+def download_department_wise_report(
+    department: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    data = get_department_employee_data(db, department)
+
+    headers = [
+        "Employee ID",
+        "Employee Name",
+        "Email",
+        "Mobile",
+        "Department",
+        "Designation",
+        "Joining Date",
+        "Status"
+    ]
+
+    rows = [
+        [
+            item["employee_id"],
+            item["employee_name"],
+            item["email"],
+            item["mobile"],
+            item["department"],
+            item["designation"],
+            item["joining_date"],
+            item["status"]
+        ]
+        for item in data
+    ]
+
+    file = create_excel_file(
+        "Department Employees",
+        headers,
+        rows
+    )
+
+    return StreamingResponse(
+        file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            'attachment; filename="Department_Wise_Employees.xlsx"'
+        }
+    )
+
+
+# ==================================================
+# 5. LATE ATTENDANCE REPORT
+# ==================================================
+
+def get_late_attendance_data(
+    db: Session,
+    start_date: Optional[date],
+    end_date: Optional[date]
+):
+    query = db.query(
+        Attendance,
+        Employee
+    ).join(
+        Employee,
+        Attendance.employee_id == Employee.employee_id
+    ).filter(
+        Employee.is_deleted == False,
+        Attendance.is_late == True
+    )
+
+    if start_date:
+        query = query.filter(
+            Attendance.attendance_date >= start_date
+        )
+
+    if end_date:
+        query = query.filter(
+            Attendance.attendance_date <= end_date
+        )
+
+    records = query.order_by(
+        Attendance.attendance_date.desc(),
+        Employee.employee_name.asc()
+    ).all()
+
+    return [
+        {
+            "attendance_id": attendance.attendance_id,
+            "employee_id": employee.employee_id,
+            "employee_name": employee.employee_name,
+            "department": employee.department,
+            "attendance_date": attendance.attendance_date,
+            "check_in": attendance.check_in,
+            "is_late": attendance.is_late,
+            "remarks": attendance.remarks
+        }
+        for attendance, employee in records
+    ]
+
+
+@router.get("/late-attendance")
+def late_attendance_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be after end date"
+        )
+
+    data = get_late_attendance_data(
+        db, start_date, end_date
+    )
+
+    return {
+        "total_records": len(data),
+        "data": data
+    }
+
+
+@router.get("/late-attendance/excel")
+def download_late_attendance_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be after end date"
+        )
+
+    data = get_late_attendance_data(
+        db, start_date, end_date
+    )
+
+    headers = [
+        "Attendance ID",
+        "Employee ID",
+        "Employee Name",
+        "Department",
+        "Attendance Date",
+        "Check In",
+        "Late",
+        "Remarks"
+    ]
+
+    rows = [
+        [
+            item["attendance_id"],
+            item["employee_id"],
+            item["employee_name"],
+            item["department"],
+            item["attendance_date"],
+            item["check_in"],
+            "Yes" if item["is_late"] else "No",
+            item["remarks"]
+        ]
+        for item in data
+    ]
+
+    file = create_excel_file(
+        "Late Attendance",
+        headers,
+        rows
+    )
+
+    return StreamingResponse(
+        file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            'attachment; filename="Late_Attendance_Report.xlsx"'
+        }
+    )
+
+
+# ==================================================
+# 6. ABSENCE AND LEAVE REPORT
+# ==================================================
+
+def get_absence_leave_data(
+    db: Session,
+    start_date: Optional[date],
+    end_date: Optional[date],
+    status: Optional[str] = None
+):
+    query = db.query(
+        Attendance,
+        Employee
+    ).join(
+        Employee,
+        Attendance.employee_id == Employee.employee_id
+    ).filter(
+        Employee.is_deleted == False,
+        Attendance.status.in_(["Absent", "On Leave"])
+    )
+
+    if start_date:
+        query = query.filter(
+            Attendance.attendance_date >= start_date
+        )
+
+    if end_date:
+        query = query.filter(
+            Attendance.attendance_date <= end_date
+        )
+
+    if status:
+        if status not in ["Absent", "On Leave"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Status must be Absent or On Leave"
+            )
+
+        query = query.filter(
+            Attendance.status == status
+        )
+
+    records = query.order_by(
+        Attendance.attendance_date.desc(),
+        Employee.employee_name.asc()
+    ).all()
+
+    return [
+        {
+            "attendance_id": attendance.attendance_id,
+            "employee_id": employee.employee_id,
+            "employee_name": employee.employee_name,
+            "department": employee.department,
+            "attendance_date": attendance.attendance_date,
+            "status": attendance.status,
+            "remarks": attendance.remarks
+        }
+        for attendance, employee in records
+    ]
+
+
+@router.get("/absence-leave")
+def absence_leave_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be after end date"
+        )
+
+    data = get_absence_leave_data(
+        db, start_date, end_date, status
+    )
+
+    return {
+        "total_records": len(data),
+        "data": data
+    }
+
+
+@router.get("/absence-leave/excel")
+def download_absence_leave_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_authenticated_user)
+):
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be after end date"
+        )
+
+    data = get_absence_leave_data(
+        db, start_date, end_date, status
+    )
+
+    headers = [
+        "Attendance ID",
+        "Employee ID",
+        "Employee Name",
+        "Department",
+        "Attendance Date",
+        "Status",
+        "Remarks"
+    ]
+
+    rows = [
+        [
+            item["attendance_id"],
+            item["employee_id"],
+            item["employee_name"],
+            item["department"],
+            item["attendance_date"],
+            item["status"],
+            item["remarks"]
+        ]
+        for item in data
+    ]
+
+    file = create_excel_file(
+        "Absence and Leave",
+        headers,
+        rows
+    )
+
+    return StreamingResponse(
+        file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            'attachment; filename="Absence_Leave_Report.xlsx"'
+        }
+    )
